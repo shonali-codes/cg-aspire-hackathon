@@ -1,0 +1,2943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComplianceHub v2 - Multi-Source Employee Compliance Management</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .animate-pulse-custom {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        
+        // Icons
+        const CheckCircle2 = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+        
+        const XCircle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+        
+        const MessageSquare = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+        );
+        
+        const ExternalLink = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+        );
+        
+        const LogOut = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+        );
+        
+        const Search = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        );
+        
+        const Settings = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        );
+        
+        const Bell = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+        );
+
+        const AlertTriangle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+        );
+
+        const History = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const BarChart = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+        );
+
+        const Edit = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+        );
+
+        const Trash = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+        );
+
+        const Plus = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+        );
+
+        const Download = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+        );
+
+        const Upload = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+        );
+
+        const Database = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+        );
+
+        const RefreshCw = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        );
+
+        const Cloud = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+            </svg>
+        );
+
+        const Wifi = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+        );
+
+        const Link = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+        );
+
+        const Key = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+        );
+
+        const Server = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+            </svg>
+        );
+
+        const Layers = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+        );
+
+        // Mock Users
+        const MOCK_USERS = {
+          'admin': {
+            id: 'admin',
+            name: 'System Admin',
+            email: 'admin@company.com',
+            password: 'admin123',
+            roles: ['admin'],
+            managerId: null,
+            reportees: []
+          },
+          'david.kim': {
+            id: 'david.kim',
+            name: 'David Kim',
+            email: 'david.kim@company.com',
+            password: 'manager123',
+            roles: ['manager'],
+            managerId: null,
+            reportees: ['sarah.johnson', 'robert.wilson', 'emily.davis', 'james.brown']
+          },
+          'sarah.johnson': {
+            id: 'sarah.johnson',
+            name: 'Sarah Johnson',
+            email: 'sarah.johnson@company.com',
+            password: 'manager123',
+            roles: ['manager', 'employee'],
+            managerId: 'david.kim',
+            reportees: ['alex.turner', 'nina.patel', 'tom.anderson', 'lisa.wong']
+          },
+          'michael.chen': {
+            id: 'michael.chen',
+            name: 'Michael Chen',
+            email: 'michael.chen@company.com',
+            password: 'manager123',
+            roles: ['manager'],
+            managerId: null,
+            reportees: ['kevin.jones', 'maria.garcia', 'ryan.smith', 'sophie.lee']
+          },
+          'priya.sharma': {
+            id: 'priya.sharma',
+            name: 'Priya Sharma',
+            email: 'priya.sharma@company.com',
+            password: 'manager123',
+            roles: ['manager'],
+            managerId: null,
+            reportees: ['amit.verma', 'rachel.kim', 'daniel.clark', 'maya.reddy']
+          },
+          'robert.wilson': {
+            id: 'robert.wilson',
+            name: 'Robert Wilson',
+            email: 'robert.wilson@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'david.kim'
+          },
+          'emily.davis': {
+            id: 'emily.davis',
+            name: 'Emily Davis',
+            email: 'emily.davis@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'david.kim'
+          },
+          'james.brown': {
+            id: 'james.brown',
+            name: 'James Brown',
+            email: 'james.brown@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'david.kim'
+          },
+          'alex.turner': {
+            id: 'alex.turner',
+            name: 'Alex Turner',
+            email: 'alex.turner@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'sarah.johnson'
+          },
+          'nina.patel': {
+            id: 'nina.patel',
+            name: 'Nina Patel',
+            email: 'nina.patel@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'sarah.johnson'
+          },
+          'tom.anderson': {
+            id: 'tom.anderson',
+            name: 'Tom Anderson',
+            email: 'tom.anderson@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'sarah.johnson'
+          },
+          'lisa.wong': {
+            id: 'lisa.wong',
+            name: 'Lisa Wong',
+            email: 'lisa.wong@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'sarah.johnson'
+          },
+          'kevin.jones': {
+            id: 'kevin.jones',
+            name: 'Kevin Jones',
+            email: 'kevin.jones@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'michael.chen'
+          },
+          'maria.garcia': {
+            id: 'maria.garcia',
+            name: 'Maria Garcia',
+            email: 'maria.garcia@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'michael.chen'
+          },
+          'ryan.smith': {
+            id: 'ryan.smith',
+            name: 'Ryan Smith',
+            email: 'ryan.smith@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'michael.chen'
+          },
+          'sophie.lee': {
+            id: 'sophie.lee',
+            name: 'Sophie Lee',
+            email: 'sophie.lee@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'michael.chen'
+          },
+          'amit.verma': {
+            id: 'amit.verma',
+            name: 'Amit Verma',
+            email: 'amit.verma@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'priya.sharma'
+          },
+          'rachel.kim': {
+            id: 'rachel.kim',
+            name: 'Rachel Kim',
+            email: 'rachel.kim@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'priya.sharma'
+          },
+          'daniel.clark': {
+            id: 'daniel.clark',
+            name: 'Daniel Clark',
+            email: 'daniel.clark@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'priya.sharma'
+          },
+          'maya.reddy': {
+            id: 'maya.reddy',
+            name: 'Maya Reddy',
+            email: 'maya.reddy@company.com',
+            password: 'employee123',
+            roles: ['employee'],
+            managerId: 'priya.sharma'
+          }
+        };
+
+        // Default Data Sources
+        const DEFAULT_DATA_SOURCES = {
+          'mock': {
+            id: 'mock',
+            name: 'Mock Data (Demo Mode)',
+            type: 'mock',
+            description: 'Generates random compliance data for testing and demos',
+            isDefault: true
+          },
+          'timesheet-system': {
+            id: 'timesheet-system',
+            name: 'Timesheet System',
+            type: 'api',
+            description: 'Company timesheet management system',
+            baseUrl: 'https://timesheet-api.company.com',
+            authType: 'bearer',
+            bearerToken: '',
+            timeout: 30000,
+            retryAttempts: 3,
+            lastSync: null
+          },
+          'learning-system': {
+            id: 'learning-system',
+            name: 'Learning Management System',
+            type: 'api',
+            description: 'Corporate training and certifications platform',
+            baseUrl: 'https://learning-api.company.com',
+            authType: 'apikey',
+            apiKey: '',
+            timeout: 30000,
+            retryAttempts: 3,
+            lastSync: null
+          },
+          'hr-system': {
+            id: 'hr-system',
+            name: 'HR Management System',
+            type: 'api',
+            description: 'Human resources and performance management',
+            baseUrl: 'https://hr-api.company.com',
+            authType: 'basic',
+            username: '',
+            password: '',
+            timeout: 30000,
+            retryAttempts: 3,
+            lastSync: null
+          }
+        };
+
+        // Default compliance categories with data source assignments
+        const DEFAULT_COMPLIANCE_CATEGORIES = [
+          { 
+            id: 'timesheet', 
+            name: 'Timesheet', 
+            url: 'https://timesheet.company.com', 
+            apiEndpoint: '/api/compliance',
+            dataSourceId: 'timesheet-system'
+          },
+          { 
+            id: 'trainings', 
+            name: 'Mandatory Trainings', 
+            url: 'https://learning.company.com', 
+            apiEndpoint: '/api/status',
+            dataSourceId: 'learning-system'
+          },
+          { 
+            id: 'appraisals', 
+            name: 'Yearly Appraisals', 
+            url: 'https://performance.company.com', 
+            apiEndpoint: '/api/appraisals',
+            dataSourceId: 'hr-system'
+          },
+          { 
+            id: 'leaves', 
+            name: 'Leaves', 
+            url: 'https://hrms.company.com/leaves', 
+            apiEndpoint: '/api/leaves',
+            dataSourceId: 'hr-system'
+          },
+          { 
+            id: 'surveys', 
+            name: 'Surveys', 
+            url: 'https://surveys.company.com', 
+            apiEndpoint: '/api/surveys',
+            dataSourceId: 'mock'
+          }
+        ];
+
+        // Default frequency settings (in days)
+        const DEFAULT_FREQUENCIES = {
+          timesheet: 7,      // Weekly
+          trainings: 90,     // Quarterly
+          appraisals: 365,   // Yearly
+          leaves: 30,        // Monthly
+          surveys: 30        // Monthly
+        };
+
+        // Calculate compliance based on frequency
+        const calculateCompliance = (lastUpdated, frequencyDays) => {
+          if (!lastUpdated) return false;
+          const lastUpdateDate = new Date(lastUpdated);
+          const today = new Date();
+          const daysSinceUpdate = Math.floor((today - lastUpdateDate) / (1000 * 60 * 60 * 24));
+          return daysSinceUpdate <= frequencyDays;
+        };
+
+        // Calculate next due date
+        const calculateNextDueDate = (lastUpdated, frequencyDays) => {
+          const lastUpdateDate = new Date(lastUpdated);
+          const nextDue = new Date(lastUpdateDate);
+          nextDue.setDate(nextDue.getDate() + frequencyDays);
+          return nextDue;
+        };
+
+        // Check if approaching due date (within 3 days)
+        const isApproachingDueDate = (nextDueDate) => {
+          const today = new Date();
+          const daysUntilDue = Math.floor((nextDueDate - today) / (1000 * 60 * 60 * 24));
+          return daysUntilDue <= 3 && daysUntilDue >= 0;
+        };
+
+        // Generate mock compliance data with dates
+        const generateComplianceData = (categories) => {
+          const data = {};
+          Object.keys(MOCK_USERS).forEach(userId => {
+            if (MOCK_USERS[userId].roles.includes('employee')) {
+              const randomDaysAgo = (max) => {
+                const days = Math.floor(Math.random() * max);
+                const date = new Date();
+                date.setDate(date.getDate() - days);
+                return date.toISOString().split('T')[0];
+              };
+
+              data[userId] = {};
+              categories.forEach(cat => {
+                data[userId][cat.id] = { 
+                  lastUpdated: randomDaysAgo(45),
+                  source: 'mock'
+                };
+              });
+            }
+          });
+          return data;
+        };
+
+        // Generate historical compliance data
+        const generateHistoricalData = (currentData, frequencies, categories) => {
+          const history = {};
+          const today = new Date();
+          
+          const months = [
+            { label: '2 Months Ago', date: new Date(today.getFullYear(), today.getMonth() - 2, 1) },
+            { label: '1 Month Ago', date: new Date(today.getFullYear(), today.getMonth() - 1, 1) },
+            { label: 'Current', date: today }
+          ];
+
+          Object.keys(MOCK_USERS).forEach(userId => {
+            if (MOCK_USERS[userId].roles.includes('employee')) {
+              history[userId] = {};
+              
+              months.forEach((month, idx) => {
+                history[userId][month.label] = {};
+                
+                categories.forEach(cat => {
+                  const frequencyDays = frequencies[cat.id] || DEFAULT_FREQUENCIES[cat.id] || 30;
+                  
+                  if (idx === 2) {
+                    const isCompliant = calculateCompliance(currentData[userId]?.[cat.id]?.lastUpdated, frequencyDays);
+                    history[userId][month.label][cat.id] = isCompliant;
+                  } else {
+                    const complianceRate = idx === 0 ? 0.7 : 0.75;
+                    history[userId][month.label][cat.id] = Math.random() < complianceRate;
+                  }
+                });
+              });
+            }
+          });
+          
+          return history;
+        };
+
+        // Fetch compliance data from specific API data source
+        const fetchFromDataSource = async (dataSource, category, userId) => {
+          if (dataSource.type === 'mock') {
+            // Return mock data
+            const randomDaysAgo = Math.floor(Math.random() * 45);
+            const date = new Date();
+            date.setDate(date.getDate() - randomDaysAgo);
+            
+            return {
+              lastUpdated: date.toISOString().split('T')[0],
+              source: 'mock'
+            };
+          }
+
+          // Fetch from real API
+          try {
+            const url = `${dataSource.baseUrl}${category.apiEndpoint}/${userId}`;
+            const headers = { 'Content-Type': 'application/json' };
+            
+            // Add authentication based on type
+            if (dataSource.authType === 'bearer' && dataSource.bearerToken) {
+              headers['Authorization'] = `Bearer ${dataSource.bearerToken}`;
+            } else if (dataSource.authType === 'apikey' && dataSource.apiKey) {
+              headers['X-API-Key'] = dataSource.apiKey;
+            } else if (dataSource.authType === 'basic' && dataSource.username && dataSource.password) {
+              const credentials = btoa(`${dataSource.username}:${dataSource.password}`);
+              headers['Authorization'] = `Basic ${credentials}`;
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), dataSource.timeout || 30000);
+
+            const response = await fetch(url, {
+              method: 'GET',
+              headers: headers,
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            
+            if (!result.lastUpdated) {
+              throw new Error('Invalid response: missing lastUpdated field');
+            }
+
+            return {
+              lastUpdated: result.lastUpdated,
+              source: dataSource.id,
+              fetchedAt: new Date().toISOString()
+            };
+
+          } catch (error) {
+            // Fallback to mock data on error
+            const randomDaysAgo = Math.floor(Math.random() * 45);
+            const date = new Date();
+            date.setDate(date.getDate() - randomDaysAgo);
+            
+            return {
+              lastUpdated: date.toISOString().split('T')[0],
+              source: 'mock-fallback',
+              error: error.message
+            };
+          }
+        };
+
+        // Fetch compliance data from multiple sources
+        const fetchComplianceDataFromMultipleSources = async (categories, dataSources) => {
+          const data = {};
+          const errors = [];
+
+          for (const userId in MOCK_USERS) {
+            if (MOCK_USERS[userId].roles.includes('employee')) {
+              data[userId] = {};
+              
+              for (const cat of categories) {
+                try {
+                  const dataSource = dataSources[cat.dataSourceId] || dataSources['mock'];
+                  const result = await fetchFromDataSource(dataSource, cat, userId);
+                  data[userId][cat.id] = result;
+                } catch (error) {
+                  errors.push({ userId, category: cat.id, error: error.message });
+                  
+                  // Ultimate fallback
+                  const randomDaysAgo = Math.floor(Math.random() * 45);
+                  const date = new Date();
+                  date.setDate(date.getDate() - randomDaysAgo);
+                  
+                  data[userId][cat.id] = {
+                    lastUpdated: date.toISOString().split('T')[0],
+                    source: 'error-fallback',
+                    error: error.message
+                  };
+                }
+              }
+            }
+          }
+
+          return { data, errors };
+        };
+
+        // Test data source connection
+        const testDataSourceConnection = async (dataSource) => {
+          if (dataSource.type === 'mock') {
+            return {
+              success: true,
+              status: 200,
+              message: 'Mock data source is always available'
+            };
+          }
+
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const headers = { 'Content-Type': 'application/json' };
+            
+            if (dataSource.authType === 'bearer' && dataSource.bearerToken) {
+              headers['Authorization'] = `Bearer ${dataSource.bearerToken}`;
+            } else if (dataSource.authType === 'apikey' && dataSource.apiKey) {
+              headers['X-API-Key'] = dataSource.apiKey;
+            } else if (dataSource.authType === 'basic' && dataSource.username && dataSource.password) {
+              const credentials = btoa(`${dataSource.username}:${dataSource.password}`);
+              headers['Authorization'] = `Basic ${credentials}`;
+            }
+
+            const response = await fetch(`${dataSource.baseUrl}/health`, {
+              method: 'GET',
+              headers: headers,
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            return {
+              success: response.ok,
+              status: response.status,
+              message: response.ok ? 'Connection successful' : `HTTP ${response.status}`
+            };
+          } catch (error) {
+            return {
+              success: false,
+              status: 0,
+              message: error.message
+            };
+          }
+        };
+
+        // Data Source Badge Component
+        const DataSourceBadge = ({ dataSourceId, dataSources, className = '' }) => {
+          const source = dataSources[dataSourceId] || dataSources['mock'];
+          const isMock = source.type === 'mock';
+          
+          return (
+            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+              isMock ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+            } ${className}`}>
+              {isMock ? <Database className="w-3 h-3" /> : <Cloud className="w-3 h-3" />}
+              {source.name}
+            </span>
+          );
+        };
+
+        // Login Component
+        const LoginPage = ({ onLogin }) => {
+          const [username, setUsername] = useState('');
+          const [password, setPassword] = useState('');
+          const [error, setError] = useState('');
+          const [showHint, setShowHint] = useState(false);
+
+          const handleLogin = (e) => {
+            e.preventDefault();
+            const user = MOCK_USERS[username];
+            
+            if (user && user.password === password) {
+              onLogin(user);
+              setError('');
+            } else {
+              setError('Invalid username or password');
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-white" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-gray-800 mb-2">ComplianceHub v2</h1>
+                  <p className="text-gray-600">Multi-Source Compliance Management</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Username
+                    </label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      placeholder="Enter your username"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg"
+                  >
+                    Sign In
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowHint(!showHint)}
+                    className="w-full text-sm text-blue-600 hover:text-blue-800 transition"
+                  >
+                    {showHint ? 'Hide' : 'Show'} Demo Credentials
+                  </button>
+
+                  {showHint && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm space-y-2">
+                      <p className="font-semibold text-blue-900">Admin Account:</p>
+                      <p className="text-blue-800">• admin / admin123</p>
+                      <p className="font-semibold text-blue-900 mt-3">Manager Accounts:</p>
+                      <p className="text-blue-800">• david.kim / manager123</p>
+                      <p className="text-blue-800">• sarah.johnson / manager123</p>
+                      <p className="font-semibold text-blue-900 mt-3">Employee Accounts:</p>
+                      <p className="text-blue-800">• kevin.jones / employee123</p>
+                    </div>
+                  )}
+                </form>
+              </div>
+            </div>
+          );
+        };
+
+        // Employee Dashboard
+        const EmployeeDashboard = ({ user, complianceData, comments, setComments, frequencies, historicalData, categories, dataSources, onLogout, onSwitchToManager }) => {
+          const [activeTab, setActiveTab] = useState('current');
+          const [replyModalOpen, setReplyModalOpen] = useState(false);
+          const [selectedConversation, setSelectedConversation] = useState(null);
+          const [replyText, setReplyText] = useState('');
+
+          const userCompliance = complianceData[user.id] || {};
+          const userComments = comments[user.id] || {};
+          const userHistory = historicalData[user.id] || {};
+
+          const handleReply = () => {
+            if (!replyText.trim() || !selectedConversation) return;
+
+            setComments(prev => ({
+              ...prev,
+              [user.id]: {
+                ...prev[user.id],
+                [selectedConversation.category]: [
+                  ...(prev[user.id]?.[selectedConversation.category] || []),
+                  {
+                    text: replyText,
+                    date: new Date().toISOString(),
+                    senderId: user.id,
+                    senderName: user.name,
+                    isEmployeeReply: true,
+                    read: false
+                  }
+                ]
+              }
+            }));
+
+            setReplyText('');
+            setReplyModalOpen(false);
+            setSelectedConversation(null);
+          };
+
+          const ComplianceCard = ({ category, data, categoryComments }) => {
+            const frequencyDays = frequencies[category.id] || DEFAULT_FREQUENCIES[category.id] || 30;
+            const isCompliant = calculateCompliance(data?.lastUpdated, frequencyDays);
+            const nextDueDate = calculateNextDueDate(data?.lastUpdated, frequencyDays);
+            const approaching = isApproachingDueDate(nextDueDate);
+            const hasComments = categoryComments && categoryComments.length > 0;
+
+            return (
+              <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition duration-300 p-6 border border-gray-100">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-800">{category.name}</h3>
+                      <DataSourceBadge dataSourceId={category.dataSourceId} dataSources={dataSources} />
+                    </div>
+                    <p className="text-xs text-gray-500">Last updated: {data?.lastUpdated || 'N/A'}</p>
+                    <p className="text-xs text-gray-500">Next due: {nextDueDate.toLocaleDateString()}</p>
+                  </div>
+                  <div className={`p-2 rounded-full ${isCompliant ? 'bg-green-100' : 'bg-red-100'}`}>
+                    {isCompliant ? (
+                      <CheckCircle2 className="w-6 h-6 text-green-600" />
+                    ) : (
+                      <XCircle className="w-6 h-6 text-red-600" />
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className={`px-4 py-2 rounded-lg ${isCompliant ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <p className={`text-sm font-medium ${isCompliant ? 'text-green-800' : 'text-red-800'}`}>
+                      {isCompliant ? '✓ Compliant' : '✗ Non-Compliant'}
+                    </p>
+                  </div>
+
+                  {approaching && !isCompliant && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-yellow-900">Due Soon!</p>
+                        <p className="text-xs text-yellow-800">Please update before {nextDueDate.toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasComments && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2 mb-2">
+                        <MessageSquare className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-amber-900">Conversation ({categoryComments.length} messages)</p>
+                      </div>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {categoryComments.slice(-2).map((comment, idx) => (
+                          <div key={idx} className={`text-xs p-2 rounded ${comment.isEmployeeReply ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-900'}`}>
+                            <p className="font-semibold">{comment.senderName}:</p>
+                            <p>{comment.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedConversation({ category: category.id, categoryName: category.name });
+                          setReplyModalOpen(true);
+                        }}
+                        className="mt-2 w-full bg-amber-600 text-white px-3 py-1 rounded text-xs hover:bg-amber-700 transition"
+                      >
+                        View Full Conversation & Reply
+                      </button>
+                    </div>
+                  )}
+
+                  <a
+                    href={category.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200 text-sm font-medium"
+                  >
+                    Go to {category.name}
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            );
+          };
+
+          const ComplianceHistory = () => {
+            const periods = ['2 Months Ago', '1 Month Ago', 'Current'];
+            
+            return (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <History className="w-6 h-6 text-indigo-600" />
+                    Your Compliance History (Past 2 Months)
+                  </h3>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b-2 border-gray-200">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                            Category
+                          </th>
+                          {periods.map(period => (
+                            <th key={period} className="px-6 py-4 text-center text-sm font-semibold text-gray-700">
+                              {period}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {categories.map(cat => (
+                          <tr key={cat.id} className="hover:bg-gray-50 transition">
+                            <td className="px-6 py-4">
+                              <p className="font-medium text-gray-900">{cat.name}</p>
+                            </td>
+                            {periods.map(period => {
+                              const isCompliant = userHistory[period]?.[cat.id];
+                              return (
+                                <td key={period} className="px-6 py-4 text-center">
+                                  <div className="flex justify-center">
+                                    <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${
+                                      isCompliant ? 'bg-green-100' : 'bg-red-100'
+                                    }`}>
+                                      {isCompliant ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-600" />
+                                      ) : (
+                                        <XCircle className="w-6 h-6 text-red-600" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-3 gap-4">
+                    {periods.map(period => {
+                      const compliantCount = categories.filter(cat => 
+                        userHistory[period]?.[cat.id]
+                      ).length;
+                      const totalCount = categories.length;
+                      const percentage = totalCount > 0 ? Math.round((compliantCount / totalCount) * 100) : 0;
+                      
+                      return (
+                        <div key={period} className="bg-gray-50 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-600 mb-1">{period}</p>
+                          <p className="text-2xl font-bold text-gray-800">{compliantCount}/{totalCount}</p>
+                          <p className="text-xs text-gray-500">{percentage}% Compliant</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          const complianceStats = categories.reduce((acc, cat) => {
+            const frequencyDays = frequencies[cat.id] || DEFAULT_FREQUENCIES[cat.id] || 30;
+            const isCompliant = calculateCompliance(userCompliance[cat.id]?.lastUpdated, frequencyDays);
+            acc.total++;
+            if (isCompliant) acc.compliant++;
+            return acc;
+          }, { total: 0, compliant: 0 });
+
+          return (
+            <div className="min-h-screen bg-gray-50">
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub v2</h1>
+                        <p className="text-sm text-gray-600">Employee Dashboard</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-800">{user.name}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                      </div>
+                      {user.roles.includes('manager') && (
+                        <button
+                          onClick={onSwitchToManager}
+                          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                        >
+                          Switch to Manager View
+                        </button>
+                      )}
+                      <button
+                        onClick={onLogout}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="max-w-7xl mx-auto px-6">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setActiveTab('current')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'current'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <BarChart className="w-5 h-5" />
+                        Current Status
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('history')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'history'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="w-5 h-5" />
+                        Compliance History
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <main className="max-w-7xl mx-auto px-6 py-8">
+                {activeTab === 'current' && (
+                  <>
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6 mb-8 text-white">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-2xl font-bold mb-2">Your Compliance Overview</h2>
+                          <p className="text-blue-100">Track your compliance status across all categories</p>
+                        </div>
+                        <div className="text-center bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-4xl font-bold">{complianceStats.compliant}/{complianceStats.total}</p>
+                          <p className="text-sm text-blue-100 mt-1">Compliant Items</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {categories.map(category => (
+                        <ComplianceCard
+                          key={category.id}
+                          category={category}
+                          data={userCompliance[category.id]}
+                          categoryComments={userComments[category.id]}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'history' && <ComplianceHistory />}
+              </main>
+
+              {replyModalOpen && selectedConversation && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">
+                      Conversation: {selectedConversation.categoryName}
+                    </h3>
+
+                    <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                      {userComments[selectedConversation.category]?.map((comment, idx) => (
+                        <div key={idx} className={`p-4 rounded-lg ${comment.isEmployeeReply ? 'bg-blue-50 border-l-4 border-blue-500 ml-8' : 'bg-amber-50 border-l-4 border-amber-500 mr-8'}`}>
+                          <div className="flex items-start justify-between mb-2">
+                            <p className="font-semibold text-sm text-gray-900">{comment.senderName}</p>
+                            <p className="text-xs text-gray-500">{new Date(comment.date).toLocaleString()}</p>
+                          </div>
+                          <p className="text-sm text-gray-800">{comment.text}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Your Reply</label>
+                      <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Type your reply here..."
+                        rows={4}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+                      />
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleReply}
+                          disabled={!replyText.trim()}
+                          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          Send Reply
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReplyModalOpen(false);
+                            setSelectedConversation(null);
+                            setReplyText('');
+                          }}
+                          className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        // Settings Modal Component
+        const SettingsModal = ({ frequencies, setFrequencies, onClose, isAdmin, categories }) => {
+          const [localFrequencies, setLocalFrequencies] = useState({...frequencies});
+
+          const handleSave = () => {
+            setFrequencies(localFrequencies);
+            onClose();
+          };
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    {isAdmin ? 'Global Compliance Settings' : 'Team Compliance Settings'}
+                  </h3>
+                  <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <XCircle className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-6">
+                  {isAdmin 
+                    ? 'Configure company-wide default compliance frequencies. These settings apply to all teams.'
+                    : 'Configure compliance check frequencies for your team. These override global defaults.'}
+                </p>
+
+                <div className="space-y-4">
+                  {categories.map(category => (
+                    <div key={category.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-semibold text-gray-800">{category.name}</p>
+                        <p className="text-xs text-gray-500">Current: Every {localFrequencies[category.id] || DEFAULT_FREQUENCIES[category.id] || 30} days</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600">Every</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={localFrequencies[category.id] || DEFAULT_FREQUENCIES[category.id] || 30}
+                          onChange={(e) => setLocalFrequencies({
+                            ...localFrequencies,
+                            [category.id]: parseInt(e.target.value) || 1
+                          })}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <label className="text-sm text-gray-600">days</label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={handleSave}
+                    className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
+                  >
+                    Save Settings
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        // Manager Dashboard (keeping it shorter for space, similar structure to employee dashboard)
+        const ManagerDashboard = ({ user, complianceData, comments, setComments, frequencies, setFrequencies, historicalData, categories, dataSources, onLogout, onSwitchToEmployee }) => {
+          const [activeTab, setActiveTab] = useState('current');
+          const [searchTerm, setSearchTerm] = useState('');
+          const [filterStatus, setFilterStatus] = useState('all');
+          const [selectedEmployee, setSelectedEmployee] = useState(null);
+          const [commentText, setCommentText] = useState('');
+          const [selectedCategory, setSelectedCategory] = useState(null);
+          const [showSettings, setShowSettings] = useState(false);
+          const [manualOverrides, setManualOverrides] = useState({});
+
+          const reportees = user.reportees?.map(id => MOCK_USERS[id]).filter(Boolean) || [];
+
+          const hasUnreadReplies = (empId, catId) => {
+            const convComments = comments[empId]?.[catId] || [];
+            return convComments.some(c => c.isEmployeeReply && !c.read);
+          };
+
+          const filteredReportees = useMemo(() => {
+            return reportees.filter(emp => {
+              const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  emp.email.toLowerCase().includes(searchTerm.toLowerCase());
+              
+              if (!matchesSearch) return false;
+              if (filterStatus === 'all') return true;
+
+              const empCompliance = complianceData[emp.id] || {};
+              const compliantCount = categories.filter(cat => {
+                const frequencyDays = frequencies[cat.id] || DEFAULT_FREQUENCIES[cat.id] || 30;
+                const override = manualOverrides[`${emp.id}-${cat.id}`];
+                if (override !== undefined) return override;
+                return calculateCompliance(empCompliance[cat.id]?.lastUpdated, frequencyDays);
+              }).length;
+              
+              if (filterStatus === 'compliant') return compliantCount === categories.length;
+              if (filterStatus === 'non-compliant') return compliantCount < categories.length;
+              
+              return true;
+            });
+          }, [reportees, searchTerm, filterStatus, frequencies, manualOverrides, categories]);
+
+          const handleAddComment = () => {
+            if (!commentText.trim() || !selectedEmployee || !selectedCategory) return;
+
+            setComments(prev => ({
+              ...prev,
+              [selectedEmployee.id]: {
+                ...prev[selectedEmployee.id],
+                [selectedCategory]: [
+                  ...(prev[selectedEmployee.id]?.[selectedCategory] || []),
+                  {
+                    text: commentText,
+                    date: new Date().toISOString(),
+                    senderId: user.id,
+                    senderName: user.name,
+                    isEmployeeReply: false
+                  }
+                ]
+              }
+            }));
+
+            setCommentText('');
+            setSelectedEmployee(null);
+            setSelectedCategory(null);
+          };
+
+          const markAsRead = (empId, catId) => {
+            setComments(prev => ({
+              ...prev,
+              [empId]: {
+                ...prev[empId],
+                [catId]: prev[empId]?.[catId]?.map(c => ({ ...c, read: true })) || []
+              }
+            }));
+          };
+
+          const toggleManualOverride = (empId, catId) => {
+            const key = `${empId}-${catId}`;
+            const empCompliance = complianceData[empId] || {};
+            const frequencyDays = frequencies[catId] || DEFAULT_FREQUENCIES[catId] || 30;
+            const autoStatus = calculateCompliance(empCompliance[catId]?.lastUpdated, frequencyDays);
+            
+            setManualOverrides(prev => ({
+              ...prev,
+              [key]: prev[key] === undefined ? !autoStatus : undefined
+            }));
+          };
+
+          const ComplianceTable = () => (
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Employee
+                      </th>
+                      {categories.map(cat => (
+                        <th key={cat.id} className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          <div className="flex flex-col items-center gap-1">
+                            <span>{cat.name}</span>
+                            <DataSourceBadge dataSourceId={cat.dataSourceId} dataSources={dataSources} />
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Overall
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredReportees.map(emp => {
+                      const empCompliance = complianceData[emp.id] || {};
+                      const compliantCount = categories.filter(cat => {
+                        const frequencyDays = frequencies[cat.id] || DEFAULT_FREQUENCIES[cat.id] || 30;
+                        const override = manualOverrides[`${emp.id}-${cat.id}`];
+                        if (override !== undefined) return override;
+                        return calculateCompliance(empCompliance[cat.id]?.lastUpdated, frequencyDays);
+                      }).length;
+                      const totalCount = categories.length;
+
+                      return (
+                        <tr key={emp.id} className="hover:bg-gray-50 transition">
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="font-medium text-gray-900">{emp.name}</p>
+                              <p className="text-sm text-gray-500">{emp.email}</p>
+                            </div>
+                          </td>
+                          {categories.map(cat => {
+                            const frequencyDays = frequencies[cat.id] || DEFAULT_FREQUENCIES[cat.id] || 30;
+                            const override = manualOverrides[`${emp.id}-${cat.id}`];
+                            const isCompliant = override !== undefined 
+                              ? override 
+                              : calculateCompliance(empCompliance[cat.id]?.lastUpdated, frequencyDays);
+                            const hasComment = comments[emp.id]?.[cat.id]?.length > 0;
+                            const hasUnread = hasUnreadReplies(emp.id, cat.id);
+
+                            return (
+                              <td key={cat.id} className="px-6 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => toggleManualOverride(emp.id, cat.id)}
+                                    className={`p-2 rounded-lg transition ${
+                                      isCompliant 
+                                        ? 'bg-green-100 hover:bg-green-200' 
+                                        : 'bg-red-100 hover:bg-red-200'
+                                    } ${override !== undefined ? 'ring-2 ring-purple-500' : ''}`}
+                                    title={override !== undefined ? 'Manual Override (Click to remove)' : (isCompliant ? 'Compliant' : 'Non-Compliant')}
+                                  >
+                                    {isCompliant ? (
+                                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                      <XCircle className="w-5 h-5 text-red-600" />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedEmployee(emp);
+                                      setSelectedCategory(cat.id);
+                                      if (hasUnread) markAsRead(emp.id, cat.id);
+                                    }}
+                                    className={`p-2 rounded-lg transition relative ${
+                                      hasComment 
+                                        ? 'bg-amber-100 hover:bg-amber-200' 
+                                        : 'bg-gray-100 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    <MessageSquare className={`w-5 h-5 ${hasComment ? 'text-amber-600' : 'text-gray-400'}`} />
+                                    {hasUnread && (
+                                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse-custom"></span>
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                            );
+                          })}
+                          <td className="px-6 py-4 text-center">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-100">
+                              <span className={compliantCount === totalCount ? 'text-green-700' : 'text-red-700'}>
+                                {compliantCount}/{totalCount}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+
+          // Team Compliance History Component
+          const TeamComplianceHistory = () => {
+            const periods = ['2 Months Ago', '1 Month Ago', 'Current'];
+            
+            return (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <History className="w-6 h-6 text-indigo-600" />
+                    Team Compliance History (Past 2 Months)
+                  </h3>
+                  
+                  {/* Show history for each category */}
+                  {categories.map(cat => (
+                    <div key={cat.id} className="mb-8">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4 bg-gray-50 px-4 py-2 rounded-lg flex items-center justify-between">
+                        <span>{cat.name}</span>
+                        <DataSourceBadge dataSourceId={cat.dataSourceId} dataSources={dataSources} />
+                      </h4>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b-2 border-gray-200">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                                Employee
+                              </th>
+                              {periods.map(period => (
+                                <th key={period} className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                                  {period}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {reportees.map(emp => (
+                              <tr key={emp.id} className="hover:bg-gray-50 transition">
+                                <td className="px-6 py-3">
+                                  <p className="font-medium text-gray-900 text-sm">{emp.name}</p>
+                                </td>
+                                {periods.map(period => {
+                                  const isCompliant = historicalData[emp.id]?.[period]?.[cat.id];
+                                  return (
+                                    <td key={period} className="px-6 py-3 text-center">
+                                      <div className="flex justify-center">
+                                        <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
+                                          isCompliant ? 'bg-green-100' : 'bg-red-100'
+                                        }`}>
+                                          {isCompliant ? (
+                                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                          ) : (
+                                            <XCircle className="w-5 h-5 text-red-600" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Category summary for each period */}
+                      <div className="mt-3 grid grid-cols-3 gap-3">
+                        {periods.map(period => {
+                          const compliantCount = reportees.filter(emp => 
+                            historicalData[emp.id]?.[period]?.[cat.id]
+                          ).length;
+                          const totalCount = reportees.length;
+                          const percentage = totalCount > 0 ? Math.round((compliantCount / totalCount) * 100) : 0;
+                          
+                          return (
+                            <div key={period} className="bg-gray-50 rounded-lg p-3 text-center">
+                              <p className="text-xs text-gray-600 mb-1">{period}</p>
+                              <p className="text-lg font-bold text-gray-800">{compliantCount}/{totalCount}</p>
+                              <p className="text-xs text-gray-500">{percentage}%</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Overall team summary */}
+                  <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Overall Team Compliance</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      {periods.map(period => {
+                        let totalCompliant = 0;
+                        let totalChecks = 0;
+                        
+                        reportees.forEach(emp => {
+                          categories.forEach(cat => {
+                            totalChecks++;
+                            if (historicalData[emp.id]?.[period]?.[cat.id]) {
+                              totalCompliant++;
+                            }
+                          });
+                        });
+                        
+                        const percentage = totalChecks > 0 ? Math.round((totalCompliant / totalChecks) * 100) : 0;
+                        
+                        return (
+                          <div key={period} className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 text-center border border-indigo-200">
+                            <p className="text-sm font-semibold text-gray-700 mb-2">{period}</p>
+                            <p className="text-3xl font-bold text-indigo-600">{percentage}%</p>
+                            <p className="text-xs text-gray-600 mt-1">{totalCompliant}/{totalChecks} checks</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          const statsData = useMemo(() => {
+            const total = reportees.length;
+            const fullyCompliant = reportees.filter(emp => {
+              const empCompliance = complianceData[emp.id] || {};
+              return categories.every(cat => {
+                const frequencyDays = frequencies[cat.id] || DEFAULT_FREQUENCIES[cat.id] || 30;
+                const override = manualOverrides[`${emp.id}-${cat.id}`];
+                if (override !== undefined) return override;
+                return calculateCompliance(empCompliance[cat.id]?.lastUpdated, frequencyDays);
+              });
+            }).length;
+            const hasIssues = total - fullyCompliant;
+
+            return { total, fullyCompliant, hasIssues };
+          }, [reportees, frequencies, manualOverrides, categories]);
+
+          return (
+            <div className="min-h-screen bg-gray-50">
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub v2</h1>
+                        <p className="text-sm text-gray-600">Manager Dashboard</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setShowSettings(true)}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-800">{user.name}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                      </div>
+                      {user.roles.includes('employee') && (
+                        <button
+                          onClick={onSwitchToEmployee}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                        >
+                          Switch to Employee View
+                        </button>
+                      )}
+                      <button
+                        onClick={onLogout}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              {/* Tab Navigation */}
+              <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="max-w-7xl mx-auto px-6">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setActiveTab('current')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'current'
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <BarChart className="w-5 h-5" />
+                        Current Status
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('history')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'history'
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="w-5 h-5" />
+                        Team History
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <main className="max-w-7xl mx-auto px-6 py-8">
+                {activeTab === 'current' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
+                    <p className="text-sm text-gray-600 mb-1">Total Reportees</p>
+                    <p className="text-3xl font-bold text-gray-800">{statsData.total}</p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
+                    <p className="text-sm text-gray-600 mb-1">Fully Compliant</p>
+                    <p className="text-3xl font-bold text-green-600">{statsData.fullyCompliant}</p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-600">
+                    <p className="text-sm text-gray-600 mb-1">Needs Attention</p>
+                    <p className="text-3xl font-bold text-red-600">{statsData.hasIssues}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          placeholder="Search by name or email..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFilterStatus('all')}
+                        className={`px-4 py-2 rounded-lg font-medium transition ${
+                          filterStatus === 'all' 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus('compliant')}
+                        className={`px-4 py-2 rounded-lg font-medium transition ${
+                          filterStatus === 'compliant' 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Compliant
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus('non-compliant')}
+                        className={`px-4 py-2 rounded-lg font-medium transition ${
+                          filterStatus === 'non-compliant' 
+                            ? 'bg-red-600 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Non-Compliant
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <ComplianceTable />
+                  </>
+                )}
+
+                {activeTab === 'history' && <TeamComplianceHistory />}
+              </main>
+
+              {showSettings && (
+                <SettingsModal
+                  frequencies={frequencies}
+                  setFrequencies={setFrequencies}
+                  onClose={() => setShowSettings(false)}
+                  isAdmin={false}
+                  categories={categories}
+                />
+              )}
+
+              {selectedEmployee && selectedCategory && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      Conversation with {selectedEmployee.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Category: <span className="font-semibold">
+                        {categories.find(c => c.id === selectedCategory)?.name}
+                      </span>
+                    </p>
+
+                    {comments[selectedEmployee.id]?.[selectedCategory]?.length > 0 && (
+                      <div className="mb-4 space-y-3 max-h-96 overflow-y-auto">
+                        <p className="text-sm font-semibold text-gray-700">Conversation History:</p>
+                        {comments[selectedEmployee.id][selectedCategory].map((comment, idx) => (
+                          <div key={idx} className={`p-4 rounded-lg ${comment.isEmployeeReply ? 'bg-blue-50 border-l-4 border-blue-500 ml-8' : 'bg-amber-50 border-l-4 border-amber-500 mr-8'}`}>
+                            <div className="flex items-start justify-between mb-2">
+                              <p className="font-semibold text-sm text-gray-900">
+                                {comment.senderName} {comment.isEmployeeReply && <span className="text-blue-600">(Employee)</span>}
+                              </p>
+                              <p className="text-xs text-gray-500">{new Date(comment.date).toLocaleString()}</p>
+                            </div>
+                            <p className="text-sm text-gray-800">{comment.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Add Comment</label>
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Enter your comment here..."
+                        rows={4}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-4"
+                      />
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleAddComment}
+                          disabled={!commentText.trim()}
+                          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          Add Comment
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedEmployee(null);
+                            setSelectedCategory(null);
+                            setCommentText('');
+                          }}
+                          className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        // Admin Dashboard with Multi-Source Management (continued in next part due to length...)
+        // [CONTINUED - Admin Dashboard will be in the next message due to character limits]
+
+        const AdminDashboard = ({ user, frequencies, setFrequencies, categories, setCategories, dataSources, setDataSources, onSyncData, onLogout }) => {
+          const [activeTab, setActiveTab] = useState('overview');
+          const [notification, setNotification] = useState(null);
+          
+          // Data Sources Management
+          const [showDataSourceModal, setShowDataSourceModal] = useState(false);
+          const [editingDataSource, setEditingDataSource] = useState(null);
+          const [dataSourceForm, setDataSourceForm] = useState({
+            id: '',
+            name: '',
+            type: 'api',
+            description: '',
+            baseUrl: '',
+            authType: 'bearer',
+            bearerToken: '',
+            apiKey: '',
+            username: '',
+            password: '',
+            timeout: 30000,
+            retryAttempts: 3
+          });
+          const [testResult, setTestResult] = useState(null);
+          const [isTesting, setIsTesting] = useState(false);
+          
+          // Categories Management
+          const [showCategoryModal, setShowCategoryModal] = useState(false);
+          const [editingCategory, setEditingCategory] = useState(null);
+          const [categoryForm, setCategoryForm] = useState({
+            id: '',
+            name: '',
+            url: '',
+            apiEndpoint: '',
+            dataSourceId: 'mock'
+          });
+          
+          const [showSettings, setShowSettings] = useState(false);
+          const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+
+          const showNotification = (message, type = 'success') => {
+            setNotification({ message, type });
+            setTimeout(() => setNotification(null), 3000);
+          };
+
+          // Data Source Functions
+          const handleSaveDataSource = () => {
+            if (!dataSourceForm.name.trim()) {
+              showNotification('Data source name is required', 'error');
+              return;
+            }
+
+            if (dataSourceForm.type === 'api' && !dataSourceForm.baseUrl.trim()) {
+              showNotification('Base URL is required for API sources', 'error');
+              return;
+            }
+
+            if (editingDataSource) {
+              setDataSources(prev => ({
+                ...prev,
+                [editingDataSource.id]: { ...dataSourceForm, id: editingDataSource.id }
+              }));
+              showNotification('Data source updated successfully');
+            } else {
+              const id = dataSourceForm.name.toLowerCase().replace(/\s+/g, '-');
+              if (dataSources[id]) {
+                showNotification('Data source with this ID already exists', 'error');
+                return;
+              }
+              setDataSources(prev => ({
+                ...prev,
+                [id]: { ...dataSourceForm, id }
+              }));
+              showNotification('Data source added successfully');
+            }
+
+            resetDataSourceForm();
+          };
+
+          const handleDeleteDataSource = (id) => {
+            // Check if any category uses this source
+            const usedBy = categories.filter(cat => cat.dataSourceId === id);
+            if (usedBy.length > 0) {
+              showNotification(`Cannot delete: ${usedBy.length} categories use this source`, 'error');
+              return;
+            }
+
+            setDataSources(prev => {
+              const newSources = { ...prev };
+              delete newSources[id];
+              return newSources;
+            });
+            showNotification('Data source deleted successfully', 'info');
+            setShowDeleteConfirm(null);
+          };
+
+          const handleTestDataSource = async () => {
+            setIsTesting(true);
+            setTestResult(null);
+            
+            const result = await testDataSourceConnection(dataSourceForm);
+            setTestResult(result);
+            setIsTesting(false);
+          };
+
+          const resetDataSourceForm = () => {
+            setDataSourceForm({
+              id: '',
+              name: '',
+              type: 'api',
+              description: '',
+              baseUrl: '',
+              authType: 'bearer',
+              bearerToken: '',
+              apiKey: '',
+              username: '',
+              password: '',
+              timeout: 30000,
+              retryAttempts: 3
+            });
+            setEditingDataSource(null);
+            setShowDataSourceModal(false);
+            setTestResult(null);
+          };
+
+          const openEditDataSource = (source) => {
+            setDataSourceForm({ ...source });
+            setEditingDataSource(source);
+            setShowDataSourceModal(true);
+          };
+
+          // Category Functions
+          const handleSaveCategory = () => {
+            if (!categoryForm.name.trim() || !categoryForm.url.trim()) {
+              showNotification('Category name and URL are required', 'error');
+              return;
+            }
+
+            if (editingCategory) {
+              setCategories(prev => prev.map(cat => 
+                cat.id === editingCategory.id ? { ...categoryForm } : cat
+              ));
+              showNotification('Category updated successfully');
+            } else {
+              const id = categoryForm.name.toLowerCase().replace(/\s+/g, '-');
+              if (categories.some(c => c.id === id)) {
+                showNotification('Category with this ID already exists', 'error');
+                return;
+              }
+              setCategories(prev => [...prev, { ...categoryForm, id }]);
+              setFrequencies(prev => ({ ...prev, [id]: 30 }));
+              showNotification('Category added successfully');
+            }
+
+            resetCategoryForm();
+          };
+
+          const handleDeleteCategory = (id) => {
+            setCategories(prev => prev.filter(cat => cat.id !== id));
+            setFrequencies(prev => {
+              const newFreq = { ...prev };
+              delete newFreq[id];
+              return newFreq;
+            });
+            showNotification('Category deleted successfully', 'info');
+            setShowDeleteConfirm(null);
+          };
+
+          const resetCategoryForm = () => {
+            setCategoryForm({
+              id: '',
+              name: '',
+              url: '',
+              apiEndpoint: '',
+              dataSourceId: 'mock'
+            });
+            setEditingCategory(null);
+            setShowCategoryModal(false);
+          };
+
+          const openEditCategory = (category) => {
+            setCategoryForm({ ...category });
+            setEditingCategory(category);
+            setShowCategoryModal(true);
+          };
+
+          const exportConfig = () => {
+            const config = {
+              categories: categories,
+              dataSources: dataSources,
+              frequencies: frequencies,
+              exportDate: new Date().toISOString(),
+              version: '2.0'
+            };
+            
+            const dataStr = JSON.stringify(config, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `compliancehub-config-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Configuration exported successfully');
+          };
+
+          const importConfig = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const config = JSON.parse(e.target.result);
+                
+                if (!config.categories || !config.dataSources) {
+                  throw new Error('Invalid configuration format');
+                }
+                
+                setCategories(config.categories);
+                setDataSources(config.dataSources);
+                if (config.frequencies) {
+                  setFrequencies(config.frequencies);
+                }
+                
+                showNotification('Configuration imported successfully');
+              } catch (error) {
+                showNotification('Failed to import: ' + error.message, 'error');
+              }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50">
+              {notification && (
+                <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg animate-fade-in ${
+                  notification.type === 'success' ? 'bg-green-500' :
+                  notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                } text-white`}>
+                  {notification.message}
+                </div>
+              )}
+
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+                        <Settings className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub v2</h1>
+                        <p className="text-sm text-gray-600">Admin Dashboard - Multi-Source Config</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-800">{user.name}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={onLogout}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="max-w-7xl mx-auto px-6">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setActiveTab('overview')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'overview'
+                          ? 'border-purple-600 text-purple-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <BarChart className="w-5 h-5" />
+                        Overview
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('datasources')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'datasources'
+                          ? 'border-purple-600 text-purple-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Server className="w-5 h-5" />
+                        Data Sources
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('categories')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'categories'
+                          ? 'border-purple-600 text-purple-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-5 h-5" />
+                        Categories
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <main className="max-w-7xl mx-auto px-6 py-8">
+                {activeTab === 'overview' && (
+                  <>
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-white">
+                      <h2 className="text-3xl font-bold mb-2">Multi-Source System Administration</h2>
+                      <p className="text-purple-100">Configure data sources and compliance categories with flexible API integrations</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Server className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-800">Data Sources</h3>
+                            <p className="text-sm text-gray-600">Configured</p>
+                          </div>
+                        </div>
+                        <p className="text-3xl font-bold text-gray-800">{Object.keys(dataSources).length}</p>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <Layers className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-800">Categories</h3>
+                            <p className="text-sm text-gray-600">Active</p>
+                          </div>
+                        </div>
+                        <p className="text-3xl font-bold text-gray-800">{categories.length}</p>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <Settings className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-800">Quick Actions</h3>
+                            <p className="text-sm text-gray-600">Management</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowSettings(true)}
+                            className="flex-1 bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 transition text-sm font-medium"
+                          >
+                            Frequencies
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-800">Configuration Management</h3>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={exportConfig}
+                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                          >
+                            <Download className="w-4 h-4" />
+                            Export
+                          </button>
+                          <label className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                            <Upload className="w-4 h-4" />
+                            Import
+                            <input
+                              type="file"
+                              accept=".json"
+                              onChange={importConfig}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Export your complete configuration (categories, data sources, frequencies) or import from a backup file
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">Current Data Source Mapping</h3>
+                      <div className="space-y-3">
+                        {categories.map(cat => (
+                          <div key={cat.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                              <p className="font-semibold text-gray-800">{cat.name}</p>
+                              <p className="text-xs text-gray-500">{cat.url}</p>
+                            </div>
+                            <DataSourceBadge dataSourceId={cat.dataSourceId} dataSources={dataSources} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'datasources' && (
+                  <>
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-800">Data Sources</h3>
+                        <p className="text-sm text-gray-600 mt-1">Configure API endpoints and authentication for compliance data</p>
+                      </div>
+                      <button
+                        onClick={() => setShowDataSourceModal(true)}
+                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Data Source
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {Object.values(dataSources).map(source => {
+                        const categoriesUsing = categories.filter(cat => cat.dataSourceId === source.id);
+                        const canDelete = !source.isDefault && categoriesUsing.length === 0;
+
+                        return (
+                          <div key={source.id} className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                    source.type === 'mock' ? 'bg-amber-100' : 'bg-blue-100'
+                                  }`}>
+                                    {source.type === 'mock' ? (
+                                      <Database className={`w-5 h-5 ${source.type === 'mock' ? 'text-amber-600' : 'text-blue-600'}`} />
+                                    ) : (
+                                      <Server className="w-5 h-5 text-blue-600" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-bold text-gray-800">{source.name}</h4>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                      source.type === 'mock' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {source.type === 'mock' ? 'Mock Data' : 'Live API'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">{source.description}</p>
+                                
+                                {source.type === 'api' && (
+                                  <div className="space-y-2 text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <Link className="w-4 h-4 text-gray-400" />
+                                      <span className="text-gray-600 font-mono">{source.baseUrl}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Key className="w-4 h-4 text-gray-400" />
+                                      <span className="text-gray-600 capitalize">{source.authType} Authentication</span>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500">
+                                    Used by {categoriesUsing.length} {categoriesUsing.length === 1 ? 'category' : 'categories'}
+                                  </p>
+                                  {categoriesUsing.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                      {categoriesUsing.map(cat => (
+                                        <span key={cat.id} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                                          {cat.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                {!source.isDefault && (
+                                  <>
+                                    <button
+                                      onClick={() => openEditDataSource(source)}
+                                      className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition"
+                                      title="Edit Data Source"
+                                    >
+                                      <Edit className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                      onClick={() => canDelete ? setShowDeleteConfirm({ type: 'datasource', item: source }) : null}
+                                      disabled={!canDelete}
+                                      className={`p-2 rounded-lg transition ${
+                                        canDelete 
+                                          ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                      }`}
+                                      title={canDelete ? 'Delete Data Source' : 'Cannot delete: in use by categories'}
+                                    >
+                                      <Trash className="w-5 h-5" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'categories' && (
+                  <>
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-800">Compliance Categories</h3>
+                        <p className="text-sm text-gray-600 mt-1">Manage compliance categories and assign data sources</p>
+                      </div>
+                      <button
+                        onClick={() => setShowCategoryModal(true)}
+                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Category
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {categories.map(cat => (
+                        <div key={cat.id} className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <h4 className="text-lg font-bold text-gray-800">{cat.name}</h4>
+                                <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded font-mono">{cat.id}</span>
+                                <DataSourceBadge dataSourceId={cat.dataSourceId} dataSources={dataSources} />
+                              </div>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <ExternalLink className="w-4 h-4 text-gray-400" />
+                                  <a href={cat.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                    {cat.url}
+                                  </a>
+                                </div>
+                                {cat.apiEndpoint && (
+                                  <div className="flex items-center gap-2">
+                                    <Server className="w-4 h-4 text-gray-400" />
+                                    <span className="text-gray-600 font-mono text-xs">{cat.apiEndpoint}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <History className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-600">Frequency: Every {frequencies[cat.id] || 30} days</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openEditCategory(cat)}
+                                className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition"
+                                title="Edit Category"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => setShowDeleteConfirm({ type: 'category', item: cat })}
+                                className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
+                                title="Delete Category"
+                              >
+                                <Trash className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </main>
+
+              {/* Settings Modal */}
+              {showSettings && (
+                <SettingsModal
+                  frequencies={frequencies}
+                  setFrequencies={setFrequencies}
+                  onClose={() => setShowSettings(false)}
+                  isAdmin={true}
+                  categories={categories}
+                />
+              )}
+
+              {/* Data Source Modal */}
+              {showDataSourceModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full p-6 my-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-2xl font-bold text-gray-800">
+                        {editingDataSource ? 'Edit Data Source' : 'Add Data Source'}
+                      </h3>
+                      <button onClick={resetDataSourceForm} className="text-gray-400 hover:text-gray-600">
+                        <XCircle className="w-6 h-6" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Data Source Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={dataSourceForm.name}
+                            onChange={(e) => setDataSourceForm({ ...dataSourceForm, name: e.target.value })}
+                            placeholder="e.g., Timesheet System"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Type *
+                          </label>
+                          <select
+                            value={dataSourceForm.type}
+                            onChange={(e) => setDataSourceForm({ ...dataSourceForm, type: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          >
+                            <option value="mock">Mock Data</option>
+                            <option value="api">Live API</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Description
+                        </label>
+                        <input
+                          type="text"
+                          value={dataSourceForm.description}
+                          onChange={(e) => setDataSourceForm({ ...dataSourceForm, description: e.target.value })}
+                          placeholder="Brief description of this data source"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      {dataSourceForm.type === 'api' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Base URL *
+                            </label>
+                            <input
+                              type="url"
+                              value={dataSourceForm.baseUrl}
+                              onChange={(e) => setDataSourceForm({ ...dataSourceForm, baseUrl: e.target.value })}
+                              placeholder="https://api.example.com"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Authentication Type *
+                            </label>
+                            <select
+                              value={dataSourceForm.authType}
+                              onChange={(e) => setDataSourceForm({ ...dataSourceForm, authType: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                            >
+                              <option value="bearer">Bearer Token</option>
+                              <option value="apikey">API Key</option>
+                              <option value="basic">Basic Auth</option>
+                              <option value="none">No Authentication</option>
+                            </select>
+                          </div>
+
+                          {dataSourceForm.authType === 'bearer' && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Bearer Token
+                              </label>
+                              <input
+                                type="password"
+                                value={dataSourceForm.bearerToken}
+                                onChange={(e) => setDataSourceForm({ ...dataSourceForm, bearerToken: e.target.value })}
+                                placeholder="your-bearer-token"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                              />
+                            </div>
+                          )}
+
+                          {dataSourceForm.authType === 'apikey' && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                API Key
+                              </label>
+                              <input
+                                type="password"
+                                value={dataSourceForm.apiKey}
+                                onChange={(e) => setDataSourceForm({ ...dataSourceForm, apiKey: e.target.value })}
+                                placeholder="your-api-key"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                              />
+                            </div>
+                          )}
+
+                          {dataSourceForm.authType === 'basic' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Username
+                                </label>
+                                <input
+                                  type="text"
+                                  value={dataSourceForm.username}
+                                  onChange={(e) => setDataSourceForm({ ...dataSourceForm, username: e.target.value })}
+                                  placeholder="username"
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Password
+                                </label>
+                                <input
+                                  type="password"
+                                  value={dataSourceForm.password}
+                                  onChange={(e) => setDataSourceForm({ ...dataSourceForm, password: e.target.value })}
+                                  placeholder="password"
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Timeout (ms)
+                              </label>
+                              <input
+                                type="number"
+                                value={dataSourceForm.timeout}
+                                onChange={(e) => setDataSourceForm({ ...dataSourceForm, timeout: parseInt(e.target.value) })}
+                                min="1000"
+                                max="60000"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Retry Attempts
+                              </label>
+                              <input
+                                type="number"
+                                value={dataSourceForm.retryAttempts}
+                                onChange={(e) => setDataSourceForm({ ...dataSourceForm, retryAttempts: parseInt(e.target.value) })}
+                                min="0"
+                                max="5"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-gray-800">Connection Test</h4>
+                              <button
+                                onClick={handleTestDataSource}
+                                disabled={isTesting || !dataSourceForm.baseUrl}
+                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 text-sm"
+                              >
+                                {isTesting ? (
+                                  <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Testing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Wifi className="w-4 h-4" />
+                                    Test Connection
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            {testResult && (
+                              <div className={`mt-3 px-4 py-3 rounded-lg ${
+                                testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                              }`}>
+                                <p className={`text-sm font-medium ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                                  {testResult.success ? '✓ ' : '✗ '}{testResult.message}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-6 flex gap-3">
+                      <button
+                        onClick={handleSaveDataSource}
+                        className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+                      >
+                        {editingDataSource ? 'Update Data Source' : 'Add Data Source'}
+                      </button>
+                      <button
+                        onClick={resetDataSourceForm}
+                        className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Category Modal */}
+              {showCategoryModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                      {editingCategory ? 'Edit Category' : 'Add New Category'}
+                    </h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Category Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={categoryForm.name}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                          placeholder="e.g., Timesheet Submission"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          External URL *
+                        </label>
+                        <input
+                          type="url"
+                          value={categoryForm.url}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, url: e.target.value })}
+                          placeholder="https://example.com"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          API Endpoint
+                        </label>
+                        <input
+                          type="text"
+                          value={categoryForm.apiEndpoint}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, apiEndpoint: e.target.value })}
+                          placeholder="/api/compliance"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Data Source *
+                        </label>
+                        <select
+                          value={categoryForm.dataSourceId}
+                          onChange={(e) => setCategoryForm({ ...categoryForm, dataSourceId: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        >
+                          {Object.values(dataSources).map(source => (
+                            <option key={source.id} value={source.id}>
+                              {source.name} {source.type === 'mock' ? '(Mock)' : '(API)'}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Select which data source will provide compliance data for this category
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex gap-3">
+                      <button
+                        onClick={handleSaveCategory}
+                        className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+                      >
+                        {editingCategory ? 'Update Category' : 'Add Category'}
+                      </button>
+                      <button
+                        onClick={resetCategoryForm}
+                        className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete Confirmation Modal */}
+              {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800">
+                          Delete {showDeleteConfirm.type === 'datasource' ? 'Data Source' : 'Category'}
+                        </h3>
+                        <p className="text-sm text-gray-600">This action cannot be undone</p>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-700 mb-6">
+                      Are you sure you want to delete <span className="font-bold">"{showDeleteConfirm.item.name}"</span>?
+                    </p>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          if (showDeleteConfirm.type === 'datasource') {
+                            handleDeleteDataSource(showDeleteConfirm.item.id);
+                          } else {
+                            handleDeleteCategory(showDeleteConfirm.item.id);
+                          }
+                        }}
+                        className="flex-1 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(null)}
+                        className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        // Main App Component
+        const ComplianceTracker = () => {
+          const [currentUser, setCurrentUser] = useState(null);
+          const [viewMode, setViewMode] = useState(null);
+          const [complianceData, setComplianceData] = useState({});
+          const [comments, setComments] = useState({});
+          const [frequencies, setFrequencies] = useState({...DEFAULT_FREQUENCIES});
+          const [historicalData, setHistoricalData] = useState({});
+          const [categories, setCategories] = useState(DEFAULT_COMPLIANCE_CATEGORIES);
+          const [dataSources, setDataSources] = useState(DEFAULT_DATA_SOURCES);
+
+          useEffect(() => {
+            setComplianceData(generateComplianceData(categories));
+          }, [categories]);
+
+          useEffect(() => {
+            if (Object.keys(complianceData).length > 0) {
+              setHistoricalData(generateHistoricalData(complianceData, frequencies, categories));
+            }
+          }, [frequencies, categories, complianceData]);
+
+          const handleSyncData = async () => {
+            const { data, errors } = await fetchComplianceDataFromMultipleSources(categories, dataSources);
+            setComplianceData(data);
+            
+            // Update last sync for all API sources
+            setDataSources(prev => {
+              const updated = { ...prev };
+              Object.keys(updated).forEach(key => {
+                if (updated[key].type === 'api') {
+                  updated[key].lastSync = new Date().toISOString();
+                }
+              });
+              return updated;
+            });
+            
+            if (errors.length > 0) {
+              console.warn('API fetch encountered errors:', errors);
+            }
+          };
+
+          const handleLogin = (user) => {
+            setCurrentUser(user);
+            if (user.roles.includes('admin')) {
+              setViewMode('admin');
+            } else if (user.roles.includes('manager') && !user.roles.includes('employee')) {
+              setViewMode('manager');
+            } else if (user.roles.includes('employee') && !user.roles.includes('manager')) {
+              setViewMode('employee');
+            } else if (user.roles.includes('manager') && user.roles.includes('employee')) {
+              setViewMode('employee');
+            }
+          };
+
+          const handleLogout = () => {
+            setCurrentUser(null);
+            setViewMode(null);
+          };
+
+          if (!currentUser) {
+            return <LoginPage onLogin={handleLogin} />;
+          }
+
+          if (viewMode === 'admin') {
+            return (
+              <AdminDashboard
+                user={currentUser}
+                frequencies={frequencies}
+                setFrequencies={setFrequencies}
+                categories={categories}
+                setCategories={setCategories}
+                dataSources={dataSources}
+                setDataSources={setDataSources}
+                onSyncData={handleSyncData}
+                onLogout={handleLogout}
+              />
+            );
+          }
+
+          if (viewMode === 'employee') {
+            return (
+              <EmployeeDashboard
+                user={currentUser}
+                complianceData={complianceData}
+                comments={comments}
+                setComments={setComments}
+                frequencies={frequencies}
+                historicalData={historicalData}
+                categories={categories}
+                dataSources={dataSources}
+                onLogout={handleLogout}
+                onSwitchToManager={currentUser.roles.includes('manager') ? () => setViewMode('manager') : null}
+              />
+            );
+          }
+
+          if (viewMode === 'manager') {
+            return (
+              <ManagerDashboard
+                user={currentUser}
+                complianceData={complianceData}
+                comments={comments}
+                setComments={setComments}
+                frequencies={frequencies}
+                setFrequencies={setFrequencies}
+                historicalData={historicalData}
+                categories={categories}
+                dataSources={dataSources}
+                onLogout={handleLogout}
+                onSwitchToEmployee={currentUser.roles.includes('employee') ? () => setViewMode('employee') : null}
+              />
+            );
+          }
+
+          return null;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ComplianceTracker />);
+    </script>
+</body>
+</html>
