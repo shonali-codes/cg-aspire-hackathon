@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComplianceHub v2 - Multi-Source Employee Compliance Management</title>
+    <title>ComplianceHub - Multi-Source Employee Compliance Management</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,6 +14,12 @@
     
     <!-- Babel for JSX transformation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         * {
@@ -181,6 +187,24 @@
         const Download = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+        );
+
+        const DollarSign = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const FileText = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        );
+
+        const Filter = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
         );
 
@@ -780,7 +804,7 @@
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
                     <CheckCircle2 className="w-8 h-8 text-white" />
                   </div>
-                  <h1 className="text-3xl font-bold text-gray-800 mb-2">ComplianceHub v2</h1>
+                  <h1 className="text-3xl font-bold text-gray-800 mb-2">ComplianceHub</h1>
                   <p className="text-gray-600">Multi-Source Compliance Management</p>
                 </div>
 
@@ -1067,7 +1091,7 @@
                         <CheckCircle2 className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub v2</h1>
+                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub</h1>
                         <p className="text-sm text-gray-600">Employee Dashboard</p>
                       </div>
                     </div>
@@ -1300,7 +1324,242 @@
           const [showSettings, setShowSettings] = useState(false);
           const [manualOverrides, setManualOverrides] = useState({});
 
+          // Billing-specific states
+          const [billingDataSource, setBillingDataSource] = useState('upload'); // 'upload' or 'api'
+          const [clientTimesheetData, setClientTimesheetData] = useState([]);
+          const [vendorTimesheetData, setVendorTimesheetData] = useState([]);
+          const [billingComparisons, setBillingComparisons] = useState([]);
+          const [billingSearchTerm, setBillingSearchTerm] = useState('');
+          const [billingFilterStatus, setBillingFilterStatus] = useState('all'); // 'all', 'matched', 'mismatched'
+          const [billingThreshold, setBillingThreshold] = useState(1); // Hours threshold for matching
+          const [showBillingSettings, setShowBillingSettings] = useState(false);
+
           const reportees = user.reportees?.map(id => MOCK_USERS[id]).filter(Boolean) || [];
+
+          // Billing: Parse CSV/Excel files
+          const parseFile = (file, setDataCallback) => {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+
+            if (fileExtension === 'csv') {
+              Papa.parse(file, {
+                header: true,
+                complete: (results) => {
+                  setDataCallback(results.data);
+                },
+                error: (error) => {
+                  console.error('CSV parsing error:', error);
+                  alert('Error parsing CSV file');
+                }
+              });
+            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                try {
+                  const data = new Uint8Array(e.target.result);
+                  const workbook = XLSX.read(data, { type: 'array' });
+                  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                  const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                  setDataCallback(jsonData);
+                } catch (error) {
+                  console.error('Excel parsing error:', error);
+                  alert('Error parsing Excel file');
+                }
+              };
+              reader.readAsArrayBuffer(file);
+            } else {
+              alert('Please upload a CSV or Excel file');
+            }
+          };
+
+          // Billing: Compare timesheets
+          const compareBillingData = () => {
+            if (clientTimesheetData.length === 0 || vendorTimesheetData.length === 0) {
+              alert('Please upload both client and vendor timesheets');
+              return;
+            }
+
+            const comparisons = [];
+
+            // Create a map of vendor data for quick lookup
+            const vendorMap = {};
+            vendorTimesheetData.forEach(row => {
+              const empKey = (row.EmployeeID || row.employee_id || row.EmpID || '').toString().trim();
+              const weekKey = (row.Week || row.week || row.WeekEnding || '').toString().trim();
+              const key = `${empKey}-${weekKey}`;
+              
+              vendorMap[key] = {
+                employeeID: empKey,
+                employeeName: row.EmployeeName || row.employee_name || row.Name || '',
+                week: weekKey,
+                totalHours: parseFloat(row.TotalHours || row.total_hours || row.Hours || 0),
+                leaves: parseFloat(row.Leaves || row.leaves || row.LeaveHours || 0),
+                overtime: parseFloat(row.Overtime || row.overtime || row.OvertimeHours || 0),
+                projectHours: parseFloat(row.ProjectHours || row.project_hours || row.BillableHours || 0),
+                shiftType: row.ShiftType || row.shift_type || row.Shift || '',
+                notes: row.Notes || row.notes || row.Comments || ''
+              };
+            });
+
+            // Compare client data with vendor data
+            clientTimesheetData.forEach(row => {
+              const empKey = (row.EmployeeID || row.employee_id || row.EmpID || '').toString().trim();
+              const weekKey = (row.Week || row.week || row.WeekEnding || '').toString().trim();
+              const key = `${empKey}-${weekKey}`;
+              
+              const clientData = {
+                employeeID: empKey,
+                employeeName: row.EmployeeName || row.employee_name || row.Name || '',
+                week: weekKey,
+                totalHours: parseFloat(row.TotalHours || row.total_hours || row.Hours || 0),
+                leaves: parseFloat(row.Leaves || row.leaves || row.LeaveHours || 0),
+                overtime: parseFloat(row.Overtime || row.overtime || row.OvertimeHours || 0),
+                projectHours: parseFloat(row.ProjectHours || row.project_hours || row.BillableHours || 0),
+                shiftType: row.ShiftType || row.shift_type || row.Shift || '',
+                notes: row.Notes || row.notes || row.Comments || ''
+              };
+
+              const vendorData = vendorMap[key];
+
+              if (!vendorData) {
+                comparisons.push({
+                  ...clientData,
+                  status: 'missing_vendor',
+                  discrepancy: 'No vendor data found',
+                  vendorHours: 0,
+                  vendorLeaves: 0,
+                  hoursDifference: clientData.totalHours
+                });
+              } else {
+                // Calculate expected billable hours: Client Hours = Vendor Hours - Approved Leaves
+                const expectedClientHours = vendorData.totalHours - vendorData.leaves;
+                const hoursDifference = Math.abs(clientData.totalHours - expectedClientHours);
+                
+                const isMatched = hoursDifference <= billingThreshold;
+
+                comparisons.push({
+                  ...clientData,
+                  vendorHours: vendorData.totalHours,
+                  vendorLeaves: vendorData.leaves,
+                  vendorOvertime: vendorData.overtime,
+                  vendorProjectHours: vendorData.projectHours,
+                  vendorShiftType: vendorData.shiftType,
+                  vendorNotes: vendorData.notes,
+                  expectedClientHours,
+                  hoursDifference,
+                  status: isMatched ? 'matched' : 'mismatched',
+                  discrepancy: isMatched ? 'Matched' : `Difference: ${hoursDifference.toFixed(2)} hours`
+                });
+              }
+            });
+
+            // Check for vendor data without corresponding client data
+            Object.keys(vendorMap).forEach(key => {
+              const vendorData = vendorMap[key];
+              const hasClientData = clientTimesheetData.some(row => {
+                const empKey = (row.EmployeeID || row.employee_id || row.EmpID || '').toString().trim();
+                const weekKey = (row.Week || row.week || row.WeekEnding || '').toString().trim();
+                return `${empKey}-${weekKey}` === key;
+              });
+
+              if (!hasClientData) {
+                comparisons.push({
+                  employeeID: vendorData.employeeID,
+                  employeeName: vendorData.employeeName,
+                  week: vendorData.week,
+                  totalHours: 0,
+                  vendorHours: vendorData.totalHours,
+                  vendorLeaves: vendorData.leaves,
+                  status: 'missing_client',
+                  discrepancy: 'No client data found',
+                  hoursDifference: vendorData.totalHours
+                });
+              }
+            });
+
+            setBillingComparisons(comparisons);
+          };
+
+          // Billing: Fetch from API (simulated)
+          const fetchBillingDataFromAPI = async () => {
+            alert('Fetching from API... (This is a simulated feature)');
+            
+            const simulatedClientData = reportees.map(emp => ({
+              EmployeeID: emp.id,
+              EmployeeName: emp.name,
+              Week: '2025-W47',
+              TotalHours: 40,
+              Leaves: 0,
+              Overtime: 5,
+              ProjectHours: 40,
+              ShiftType: 'Day',
+              Notes: ''
+            }));
+
+            const simulatedVendorData = reportees.map(emp => ({
+              EmployeeID: emp.id,
+              EmployeeName: emp.name,
+              Week: '2025-W47',
+              TotalHours: 40,
+              Leaves: 0,
+              Overtime: 5,
+              ProjectHours: 40,
+              ShiftType: 'Day',
+              Notes: ''
+            }));
+
+            setClientTimesheetData(simulatedClientData);
+            setVendorTimesheetData(simulatedVendorData);
+            
+            setTimeout(compareBillingData, 100);
+          };
+
+          // Billing: Export comparison results
+          const exportBillingComparison = () => {
+            if (billingComparisons.length === 0) {
+              alert('No billing comparison data to export');
+              return;
+            }
+
+            const csv = Papa.unparse(billingComparisons);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `billing_comparison_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          };
+
+          // Filtered billing comparisons
+          const filteredBillingComparisons = useMemo(() => {
+            let filtered = billingComparisons;
+
+            if (billingSearchTerm) {
+              filtered = filtered.filter(item =>
+                item.employeeName.toLowerCase().includes(billingSearchTerm.toLowerCase()) ||
+                item.employeeID.toLowerCase().includes(billingSearchTerm.toLowerCase())
+              );
+            }
+
+            if (billingFilterStatus !== 'all') {
+              filtered = filtered.filter(item => item.status === billingFilterStatus);
+            }
+
+            return filtered;
+          }, [billingComparisons, billingSearchTerm, billingFilterStatus]);
+
+          // Billing stats
+          const billingStats = useMemo(() => {
+            const total = billingComparisons.length;
+            const matched = billingComparisons.filter(item => item.status === 'matched').length;
+            const mismatched = billingComparisons.filter(item => item.status === 'mismatched').length;
+            const missingVendor = billingComparisons.filter(item => item.status === 'missing_vendor').length;
+            const missingClient = billingComparisons.filter(item => item.status === 'missing_client').length;
+
+            return { total, matched, mismatched, missingVendor, missingClient };
+          }, [billingComparisons]);
 
           const hasUnreadReplies = (empId, catId) => {
             const convComments = comments[empId]?.[catId] || [];
@@ -1627,7 +1886,7 @@
                         <CheckCircle2 className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub v2</h1>
+                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub</h1>
                         <p className="text-sm text-gray-600">Manager Dashboard</p>
                       </div>
                     </div>
@@ -1691,6 +1950,19 @@
                       <div className="flex items-center gap-2">
                         <History className="w-5 h-5" />
                         Team History
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('billing')}
+                      className={`px-6 py-4 font-medium transition border-b-2 ${
+                        activeTab === 'billing'
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5" />
+                        Billing
                       </div>
                     </button>
                   </div>
@@ -1769,6 +2041,297 @@
                 )}
 
                 {activeTab === 'history' && <TeamComplianceHistory />}
+                
+                {activeTab === 'billing' && (
+                  <div className="animate-fade-in space-y-6">
+                    {/* Data Source Selection */}
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">Billing Data Source</h3>
+                      
+                      <div className="flex gap-4 mb-6">
+                        <button
+                          onClick={() => setBillingDataSource('upload')}
+                          className={`flex-1 px-6 py-4 rounded-lg border-2 transition ${
+                            billingDataSource === 'upload'
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                              : 'border-gray-200 hover:border-indigo-300'
+                          }`}
+                        >
+                          <Upload className="w-6 h-6 mx-auto mb-2" />
+                          <p className="font-semibold">Upload Files</p>
+                          <p className="text-xs mt-1">CSV or Excel</p>
+                        </button>
+                        
+                        <button
+                          onClick={() => setBillingDataSource('api')}
+                          className={`flex-1 px-6 py-4 rounded-lg border-2 transition ${
+                            billingDataSource === 'api'
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                              : 'border-gray-200 hover:border-indigo-300'
+                          }`}
+                        >
+                          <RefreshCw className="w-6 h-6 mx-auto mb-2" />
+                          <p className="font-semibold">Fetch from API</p>
+                          <p className="text-xs mt-1">Automated sync</p>
+                        </button>
+                      </div>
+
+                      {billingDataSource === 'upload' && (
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition">
+                            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                              <FileText className="w-5 h-5 text-indigo-600" />
+                              Client Timesheet
+                            </h4>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Upload timesheet from client portal
+                            </p>
+                            <input
+                              type="file"
+                              accept=".csv,.xlsx,.xls"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  parseFile(file, setClientTimesheetData);
+                                }
+                              }}
+                              className="w-full text-sm"
+                            />
+                            {clientTimesheetData.length > 0 && (
+                              <p className="text-sm text-green-600 mt-2">
+                                ✓ {clientTimesheetData.length} records loaded
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition">
+                            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                              <FileText className="w-5 h-5 text-purple-600" />
+                              Vendor Timesheet
+                            </h4>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Upload timesheet from company HRMS
+                            </p>
+                            <input
+                              type="file"
+                              accept=".csv,.xlsx,.xls"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  parseFile(file, setVendorTimesheetData);
+                                }
+                              }}
+                              className="w-full text-sm"
+                            />
+                            {vendorTimesheetData.length > 0 && (
+                              <p className="text-sm text-green-600 mt-2">
+                                ✓ {vendorTimesheetData.length} records loaded
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {billingDataSource === 'api' && (
+                        <div className="text-center py-8">
+                          <RefreshCw className="w-12 h-12 mx-auto mb-4 text-indigo-600" />
+                          <p className="text-gray-600 mb-4">
+                            Fetch billing data automatically from configured systems
+                          </p>
+                          <button
+                            onClick={fetchBillingDataFromAPI}
+                            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
+                          >
+                            Fetch Data from APIs
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="mt-6 flex gap-3">
+                        <button
+                          onClick={compareBillingData}
+                          disabled={clientTimesheetData.length === 0 || vendorTimesheetData.length === 0}
+                          className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+                            clientTimesheetData.length > 0 && vendorTimesheetData.length > 0
+                              ? 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          <BarChart className="w-5 h-5" />
+                          Compare & Analyze
+                        </button>
+                        
+                        <button
+                          onClick={() => setShowBillingSettings(true)}
+                          className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-semibold flex items-center gap-2"
+                        >
+                          <Settings className="w-5 h-5" />
+                          Settings
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Billing Statistics */}
+                    {billingComparisons.length > 0 && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
+                            <p className="text-sm text-gray-600 mb-1">Total Records</p>
+                            <p className="text-3xl font-bold text-gray-800">{billingStats.total}</p>
+                          </div>
+                          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
+                            <p className="text-sm text-gray-600 mb-1">Matched</p>
+                            <p className="text-3xl font-bold text-green-600">{billingStats.matched}</p>
+                          </div>
+                          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-600">
+                            <p className="text-sm text-gray-600 mb-1">Mismatched</p>
+                            <p className="text-3xl font-bold text-red-600">{billingStats.mismatched}</p>
+                          </div>
+                          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-600">
+                            <p className="text-sm text-gray-600 mb-1">Missing Vendor</p>
+                            <p className="text-3xl font-bold text-yellow-600">{billingStats.missingVendor}</p>
+                          </div>
+                          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-600">
+                            <p className="text-sm text-gray-600 mb-1">Missing Client</p>
+                            <p className="text-3xl font-bold text-orange-600">{billingStats.missingClient}</p>
+                          </div>
+                        </div>
+
+                        {/* Filter and Export */}
+                        <div className="bg-white rounded-xl shadow-md p-6">
+                          <div className="flex flex-col md:flex-row gap-4">
+                            <div className="flex-1">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                <input
+                                  type="text"
+                                  placeholder="Search by employee name or ID..."
+                                  value={billingSearchTerm}
+                                  onChange={(e) => setBillingSearchTerm(e.target.value)}
+                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setBillingFilterStatus('all')}
+                                className={`px-4 py-2 rounded-lg font-medium transition ${
+                                  billingFilterStatus === 'all' 
+                                    ? 'bg-indigo-600 text-white' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                All
+                              </button>
+                              <button
+                                onClick={() => setBillingFilterStatus('matched')}
+                                className={`px-4 py-2 rounded-lg font-medium transition ${
+                                  billingFilterStatus === 'matched' 
+                                    ? 'bg-green-600 text-white' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                Matched
+                              </button>
+                              <button
+                                onClick={() => setBillingFilterStatus('mismatched')}
+                                className={`px-4 py-2 rounded-lg font-medium transition ${
+                                  billingFilterStatus === 'mismatched' 
+                                    ? 'bg-red-600 text-white' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                Mismatched
+                              </button>
+                              <button
+                                onClick={exportBillingComparison}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                              >
+                                <Download className="w-4 h-4" />
+                                Export
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Billing Comparison Table */}
+                        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Employee</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Week</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 bg-blue-50">Client Hours</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 bg-purple-50">Vendor Hours</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 bg-purple-50">Vendor Leaves</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 bg-green-50">Expected</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Difference</th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {filteredBillingComparisons.map((item, index) => (
+                                  <tr key={index} className="hover:bg-gray-50 transition">
+                                    <td className="px-4 py-3">
+                                      <div>
+                                        <p className="font-medium text-gray-900 text-sm">{item.employeeName}</p>
+                                        <p className="text-xs text-gray-500">{item.employeeID}</p>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-sm text-gray-700">{item.week}</td>
+                                    <td className="px-4 py-3 text-center text-sm font-semibold text-blue-700 bg-blue-50">
+                                      {item.totalHours}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-sm text-gray-700 bg-purple-50">
+                                      {item.vendorHours || '-'}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-sm text-gray-700 bg-purple-50">
+                                      {item.vendorLeaves || '-'}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700 bg-green-50">
+                                      {item.expectedClientHours ? item.expectedClientHours.toFixed(2) : '-'}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      <span className={`text-sm font-semibold ${
+                                        item.hoursDifference <= billingThreshold ? 'text-gray-600' : 'text-red-600'
+                                      }`}>
+                                        {item.hoursDifference ? item.hoursDifference.toFixed(2) : '-'}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                        item.status === 'matched' 
+                                          ? 'bg-green-100 text-green-800'
+                                          : item.status === 'mismatched'
+                                          ? 'bg-red-100 text-red-800'
+                                          : 'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {item.status === 'matched' && <CheckCircle2 className="w-4 h-4 mr-1" />}
+                                        {item.status === 'mismatched' && <XCircle className="w-4 h-4 mr-1" />}
+                                        {(item.status === 'missing_vendor' || item.status === 'missing_client') && <AlertTriangle className="w-4 h-4 mr-1" />}
+                                        {item.status === 'matched' ? 'Matched' : 
+                                         item.status === 'mismatched' ? 'Mismatch' : 
+                                         item.status === 'missing_vendor' ? 'No Vendor' : 'No Client'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {filteredBillingComparisons.length === 0 && (
+                            <div className="text-center py-12">
+                              <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                              <p className="text-gray-600">No billing records match the current filters</p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </main>
 
               {showSettings && (
@@ -1839,6 +2402,81 @@
                           Close
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Billing Settings Modal */}
+              {showBillingSettings && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-gray-800">Billing Comparison Settings</h2>
+                      <button onClick={() => setShowBillingSettings(false)} className="text-gray-500 hover:text-gray-700">
+                        <XCircle className="w-6 h-6" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Hours Threshold (for matching)
+                        </label>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Billing records within this threshold are considered matched
+                        </p>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="number"
+                            min="0"
+                            max="24"
+                            step="0.5"
+                            value={billingThreshold}
+                            onChange={(e) => setBillingThreshold(parseFloat(e.target.value))}
+                            className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          />
+                          <span className="text-sm text-gray-600">hours</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-800 mb-2">Expected File Format</h3>
+                        <p className="text-sm text-gray-700 mb-2">Your CSV/Excel files should contain these columns:</p>
+                        <ul className="text-sm text-gray-700 space-y-1 ml-4">
+                          <li>• EmployeeID / employee_id / EmpID</li>
+                          <li>• EmployeeName / employee_name / Name</li>
+                          <li>• Week / week / WeekEnding</li>
+                          <li>• TotalHours / total_hours / Hours</li>
+                          <li>• Leaves / leaves / LeaveHours (optional)</li>
+                          <li>• Overtime / overtime / OvertimeHours (optional)</li>
+                          <li>• ProjectHours / project_hours / BillableHours (optional)</li>
+                          <li>• ShiftType / shift_type / Shift (optional)</li>
+                          <li>• Notes / notes / Comments (optional)</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-800 mb-2">Billing Formula</h3>
+                        <p className="text-sm text-gray-700">
+                          Expected Client Hours = Vendor Total Hours - Vendor Approved Leaves
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={() => setShowBillingSettings(false)}
+                        className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
+                      >
+                        Save Settings
+                      </button>
+                      <button
+                        onClick={() => setShowBillingSettings(false)}
+                        className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
+                      >
+                        Close
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2102,7 +2740,7 @@
                         <Settings className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub v2</h1>
+                        <h1 className="text-2xl font-bold text-gray-800">ComplianceHub</h1>
                         <p className="text-sm text-gray-600">Admin Dashboard - Multi-Source Config</p>
                       </div>
                     </div>
