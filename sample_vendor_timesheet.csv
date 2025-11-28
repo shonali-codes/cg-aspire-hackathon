@@ -1,0 +1,6 @@
+EmployeeID,EmployeeName,Week,TotalHours,Leaves,Overtime,ProjectHours,ShiftType,Notes
+david.kim,David Kim,2025-W47,45,0,5,40,Day,Worked extra hours
+sarah.johnson,Sarah Johnson,2025-W47,41,0,3,38,Day,
+kevin.jones,Kevin Jones,2025-W47,40,8,0,32,Day,Leave approved for Monday
+maria.garcia,Maria Garcia,2025-W47,44,0,4,40,Night,Night shift differential
+alex.turner,Alex Turner,2025-W47,35,0,0,35,Day,
