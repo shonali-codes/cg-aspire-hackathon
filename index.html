@@ -98,6 +98,39 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
         
+        // ========== LOCALSTORAGE HELPERS ==========
+        const STORAGE_KEY = 'compliancehub_custom_datasources';
+        
+        const saveCustomDataSources = (sources) => {
+          try {
+            const customSources = {};
+            Object.entries(sources).forEach(([id, source]) => {
+              if (!source.isDefault && source.type === 'api') {
+                customSources[id] = source;
+              }
+            });
+            if (Object.keys(customSources).length > 0) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(customSources));
+              console.log('💾 Saved custom data sources to LocalStorage');
+            }
+          } catch (error) {
+            console.error('❌ LocalStorage save failed:', error);
+          }
+        };
+        
+        const loadCustomDataSources = () => {
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+              console.log('📂 Loaded custom data sources from LocalStorage');
+              return JSON.parse(stored);
+            }
+          } catch (error) {
+            console.error('❌ LocalStorage load failed:', error);
+          }
+          return {};
+        };
+        
         // Icons
         const CheckCircle2 = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -625,12 +658,122 @@
             };
           }
 
-          // Fetch from real API
+          // Handle user-added APIs with employee mapping
+          if (dataSource.endpoint && dataSource.employeeMapping) {
+            try {
+              // Parse employee mapping
+              const mappings = {};
+              dataSource.employeeMapping.split(',').forEach(pair => {
+                const [empId, apiId] = pair.split('=').map(s => s.trim());
+                if (empId && apiId) {
+                  mappings[empId] = apiId;
+                }
+              });
+              
+              const apiUserId = mappings[userId];
+              if (!apiUserId) {
+                throw new Error('Employee not in mapping');
+              }
+              
+              // Build URL with placeholder replacement
+              let url = dataSource.baseUrl + dataSource.endpoint;
+              url = url.replace('{userId}', apiUserId)
+                      .replace('{employeeId}', apiUserId)
+                      .replace('{id}', apiUserId)
+                      .replace('{user}', apiUserId);
+              
+              console.log(`🟢 LIVE API (${dataSource.name}): Fetching from ${url}`);
+              const fetchStart = performance.now();
+              
+              const headers = { 'Content-Type': 'application/json' };
+              
+              // Add authentication
+              if (dataSource.authType === 'bearer' && dataSource.bearerToken) {
+                headers['Authorization'] = `Bearer ${dataSource.bearerToken}`;
+              } else if (dataSource.authType === 'apikey' && dataSource.apiKey) {
+                headers['X-API-Key'] = dataSource.apiKey;
+              } else if (dataSource.authType === 'basic' && dataSource.username && dataSource.password) {
+                const credentials = btoa(`${dataSource.username}:${dataSource.password}`);
+                headers['Authorization'] = `Basic ${credentials}`;
+              }
+              
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), dataSource.timeout || 30000);
+              
+              const response = await fetch(url, {
+                method: 'GET',
+                headers: headers,
+                signal: controller.signal
+              });
+              
+              clearTimeout(timeoutId);
+              const fetchTime = Math.round(performance.now() - fetchStart);
+              
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+              
+              const result = await response.json();
+              console.log(`✅ LIVE API (${dataSource.name}): Success in ${fetchTime}ms`, result);
+              
+              // Extract date from common fields
+              let lastUpdateDate = new Date();
+              const dateFields = ['updated_at', 'updatedAt', 'last_updated', 'lastUpdated', 'modified_at', 'modifiedAt', 'date', 'created_at', 'createdAt'];
+              let foundDate = null;
+              
+              for (const field of dateFields) {
+                if (result[field]) {
+                  foundDate = new Date(result[field]);
+                  break;
+                }
+              }
+              
+              if (!foundDate && result.data) {
+                for (const field of dateFields) {
+                  if (result.data[field]) {
+                    foundDate = new Date(result.data[field]);
+                    break;
+                  }
+                }
+              }
+              
+              if (!foundDate || isNaN(foundDate.getTime())) {
+                const daysAgo = Math.floor(Math.random() * 30);
+                lastUpdateDate.setDate(lastUpdateDate.getDate() - daysAgo);
+              } else {
+                lastUpdateDate = foundDate;
+              }
+              
+              return {
+                lastUpdated: lastUpdateDate.toISOString().split('T')[0],
+                source: dataSource.id,
+                isLive: true,
+                apiData: result,
+                fetchedAt: new Date().toISOString(),
+                apiUrl: url,
+                fetchTime: fetchTime
+              };
+              
+            } catch (error) {
+              console.error(`❌ LIVE API (${dataSource.name}): Failed -`, error.message);
+              // Fallback to mock
+              const randomDaysAgo = Math.floor(Math.random() * 45);
+              const date = new Date();
+              date.setDate(date.getDate() - randomDaysAgo);
+              
+              return {
+                lastUpdated: date.toISOString().split('T')[0],
+                source: 'mock-fallback',
+                error: error.message
+              };
+            }
+          }
+
+          // Original API logic (for backward compatibility)
           try {
             const url = `${dataSource.baseUrl}${category.apiEndpoint}/${userId}`;
             const headers = { 'Content-Type': 'application/json' };
             
-            // Add authentication based on type
             if (dataSource.authType === 'bearer' && dataSource.bearerToken) {
               headers['Authorization'] = `Bearer ${dataSource.bearerToken}`;
             } else if (dataSource.authType === 'apikey' && dataSource.apiKey) {
@@ -727,6 +870,44 @@
           }
 
           try {
+            // Parse employee mapping to get first employee for testing
+            if (!dataSource.employeeMapping || !dataSource.employeeMapping.trim()) {
+              return {
+                success: false,
+                status: 0,
+                message: 'Employee mapping is required to test the connection'
+              };
+            }
+
+            const mappings = dataSource.employeeMapping.split(',').map(m => m.trim());
+            if (mappings.length === 0) {
+              return {
+                success: false,
+                status: 0,
+                message: 'Invalid employee mapping format'
+              };
+            }
+
+            const firstMapping = mappings[0].split('=');
+            if (firstMapping.length !== 2) {
+              return {
+                success: false,
+                status: 0,
+                message: 'Invalid mapping format. Use: employeeId=apiUserId'
+              };
+            }
+
+            const testApiUserId = firstMapping[1].trim();
+            
+            // Build test URL with actual endpoint
+            let testUrl = dataSource.baseUrl + (dataSource.endpoint || '');
+            testUrl = testUrl.replace('{userId}', testApiUserId)
+                            .replace('{employeeId}', testApiUserId)
+                            .replace('{id}', testApiUserId)
+                            .replace('{user}', testApiUserId);
+
+            console.log('🧪 Testing connection to:', testUrl);
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -741,7 +922,7 @@
               headers['Authorization'] = `Basic ${credentials}`;
             }
 
-            const response = await fetch(`${dataSource.baseUrl}/health`, {
+            const response = await fetch(testUrl, {
               method: 'GET',
               headers: headers,
               signal: controller.signal
@@ -749,16 +930,22 @@
 
             clearTimeout(timeoutId);
 
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ Test successful:', data);
+            }
+
             return {
               success: response.ok,
               status: response.status,
-              message: response.ok ? 'Connection successful' : `HTTP ${response.status}`
+              message: response.ok ? `Connection successful! (${response.status})` : `HTTP ${response.status}: ${response.statusText}`
             };
           } catch (error) {
+            console.error('❌ Test failed:', error);
             return {
               success: false,
               status: 0,
-              message: error.message
+              message: error.name === 'AbortError' ? 'Connection timeout' : error.message
             };
           }
         };
@@ -2501,6 +2688,8 @@
             type: 'api',
             description: '',
             baseUrl: '',
+            endpoint: '',
+            employeeMapping: '',
             authType: 'bearer',
             bearerToken: '',
             apiKey: '',
@@ -2543,10 +2732,20 @@
               return;
             }
 
+            if (dataSourceForm.type === 'api' && !dataSourceForm.endpoint.trim()) {
+              showNotification('API Endpoint is required for API sources', 'error');
+              return;
+            }
+
+            if (dataSourceForm.type === 'api' && !dataSourceForm.employeeMapping.trim()) {
+              showNotification('Employee Mapping is required for API sources', 'error');
+              return;
+            }
+
             if (editingDataSource) {
               setDataSources(prev => ({
                 ...prev,
-                [editingDataSource.id]: { ...dataSourceForm, id: editingDataSource.id }
+                [editingDataSource.id]: { ...dataSourceForm, id: editingDataSource.id, isLive: dataSourceForm.type === 'api' }
               }));
               showNotification('Data source updated successfully');
             } else {
@@ -2557,7 +2756,7 @@
               }
               setDataSources(prev => ({
                 ...prev,
-                [id]: { ...dataSourceForm, id }
+                [id]: { ...dataSourceForm, id, isLive: dataSourceForm.type === 'api' }
               }));
               showNotification('Data source added successfully');
             }
@@ -2598,6 +2797,8 @@
               type: 'api',
               description: '',
               baseUrl: '',
+              endpoint: '',
+              employeeMapping: '',
               authType: 'bearer',
               bearerToken: '',
               apiKey: '',
@@ -3098,8 +3299,8 @@
               {/* Data Source Modal */}
               {showDataSourceModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-                  <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full p-6 my-8">
-                    <div className="flex items-center justify-between mb-6">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-4 border-b border-gray-200 -mt-6 -mx-6 px-6 pt-6 z-10">
                       <h3 className="text-2xl font-bold text-gray-800">
                         {editingDataSource ? 'Edit Data Source' : 'Add Data Source'}
                       </h3>
@@ -3164,6 +3365,34 @@
                               placeholder="https://api.example.com"
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
                             />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              API Endpoint Template *
+                            </label>
+                            <input
+                              type="text"
+                              value={dataSourceForm.endpoint}
+                              onChange={(e) => setDataSourceForm({ ...dataSourceForm, endpoint: e.target.value })}
+                              placeholder="/users/{userId} or /api/employees/{employeeId}"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Use placeholders: {"{userId}"}, {"{employeeId}"}, or {"{id}"}</p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Employee Mapping *
+                            </label>
+                            <textarea
+                              value={dataSourceForm.employeeMapping}
+                              onChange={(e) => setDataSourceForm({ ...dataSourceForm, employeeMapping: e.target.value })}
+                              placeholder="kevin.jones=1, maria.garcia=2, sarah.johnson=3"
+                              rows={3}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Format: employeeId=apiUserId, employeeId2=apiUserId2</p>
                           </div>
 
                           <div>
@@ -3305,19 +3534,21 @@
                       )}
                     </div>
 
-                    <div className="mt-6 flex gap-3">
-                      <button
-                        onClick={handleSaveDataSource}
-                        className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
-                      >
-                        {editingDataSource ? 'Update Data Source' : 'Add Data Source'}
-                      </button>
-                      <button
-                        onClick={resetDataSourceForm}
-                        className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
-                      >
-                        Cancel
-                      </button>
+                    <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 -mb-6 -mx-6 px-6 pb-6 mt-6 z-10">
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleSaveDataSource}
+                          className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+                        >
+                          {editingDataSource ? 'Update Data Source' : 'Add Data Source'}
+                        </button>
+                        <button
+                          onClick={resetDataSourceForm}
+                          className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition font-semibold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3466,7 +3697,15 @@
           const [frequencies, setFrequencies] = useState({...DEFAULT_FREQUENCIES});
           const [historicalData, setHistoricalData] = useState({});
           const [categories, setCategories] = useState(DEFAULT_COMPLIANCE_CATEGORIES);
-          const [dataSources, setDataSources] = useState(DEFAULT_DATA_SOURCES);
+          const [dataSources, setDataSources] = useState(() => {
+            const customSources = loadCustomDataSources();
+            return { ...DEFAULT_DATA_SOURCES, ...customSources };
+          });
+
+          // Auto-save custom data sources to LocalStorage
+          useEffect(() => {
+            saveCustomDataSources(dataSources);
+          }, [dataSources]);
 
           useEffect(() => {
             setComplianceData(generateComplianceData(categories));
